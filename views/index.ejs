@@ -8,7 +8,7 @@
 	<% if (user) { %>
 		<img src=<%=user.photos[0]%>>
 		<h3> Hi, <%=user.name%>!</p>
-		<h3> Your ID: <%=user.id%></p>
+		<h3> Your ID: <%=user.username%></p>
 		<p> <a href="/logout">Log out</a> </p>
 		<% user.library.forEach(function(trackObj){ %>
 			<img src=<%= trackObj.track.album.images[0].url%> width="50px">

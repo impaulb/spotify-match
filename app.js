@@ -56,7 +56,7 @@ passport.use(
 
       spotifyApi.getMySavedTracks()
       .then(function(data) {
-        User.findOrCreate({ id: profile.id }, function(err, user) {
+        User.findOrCreate({ username: profile.id }, function(err, user) {
           user.name = profile.displayName;
           user.library = data.body.items;
           user.photos = profile.photos;

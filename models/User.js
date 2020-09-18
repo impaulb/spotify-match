@@ -7,7 +7,6 @@ var findOrCreate = require('mongoose-findorcreate');
 var userSchema = new mongoose.Schema({
   username: String,
   name: String,
-  id: String,
   photos: [],
   library: [{}]
 });
