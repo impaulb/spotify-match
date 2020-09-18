@@ -1,12 +1,33 @@
 const { connect } = require("http2");
 
 var express = require("express"),
+    ejs = require('ejs'),
     mongoose = require("mongoose"),
     session = require("express-session"),
     passport = require("passport"),
     SpotifyStrategy = require("passport-spotify").Strategy,
     consolidate = require("consolidate"),
-    config = require('./config.json');
+    expressSanitizer = require("express-sanitizer"),
+    override = require("method-override"),
+    bodyParser = require("body-parser"),
+    config = require('./config.json'),
+    SpotifyAPI = require('spotify-web-api-node');
+    User = require("./models/User.js");
+
+var app = express();
+
+// configure Express
+app.set("view engine", "ejs");
+app.use(express.static("public"));
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(expressSanitizer());
+app.use(override("_method"));
+
+app.use(
+  session({ secret: "ninjawarrior", resave: true, saveUninitialized: true })
+);
+
+var spotifyApi = new SpotifyAPI();
 
 require("dotenv").config();
 
@@ -32,42 +53,38 @@ passport.use(
       callbackURL: "http://localhost:" + port + authCallbackPath,
     },
     function (accessToken, refreshToken, expires_in, profile, done) {
-      return done(null, profile);
+      spotifyApi.setAccessToken(accessToken);
+
+      spotifyApi.getMySavedTracks()
+      .then(function(data) {
+        User.findOrCreate({ id: profile.id, name: profile.displayName, username: profile.email, library: data.body.items, photos: profile.photos }, function(err, user) {
+          return done(err, user);
+        });
+      }, function(err) {
+        console.log('Something went wrong!', err);
+      });
     }
   )
 );
 
-var app = express();
-
-// configure Express
-app.set("views", __dirname + "/views");
-app.set("view engine", "html");
-
-app.use(
-  session({ secret: "ninjawarrior", resave: true, saveUninitialized: true })
-);
-
 app.use(passport.initialize());
 app.use(passport.session());
-app.use(express.static(__dirname + "/public"));
-app.engine("html", consolidate.nunjucks);
 
 // Routes
 app.get("/", function (req, res) {
-    console.log(req.user);
-  res.render("index.html", { user: req.user });
+  res.render("index", { user: req.user });
 });
 
 app.get("/account", ensureAuthenticated, function (req, res) {
-  res.render("account.html", { user: req.user });
+  res.render("account", { user: req.user });
 });
 
 app.get("/login", function (req, res) {
-  res.render("login.html", { user: req.user });
+  res.render("login", { user: req.user });
 });
 
 app.get("/auth/spotify", passport.authenticate("spotify", {
-    scope: ["user-read-private", "user-library-read"],
+    scope: ["user-read-email", "user-read-private", "user-library-read"],
     showDialog: true
 }));
 
@@ -84,6 +101,10 @@ app.get("/logout", function (req, res) {
 app.listen(port, function () {
   console.log("App is listening on port " + port);
 });
+
+function generateID(req, res, next) {
+  return Math.random().toString(36).substring(10);
+}
 
 function ensureAuthenticated(req, res, next) {
   if(req.isAuthenticated()) {
