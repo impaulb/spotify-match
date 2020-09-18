@@ -1,4 +1,7 @@
+const { connect } = require("http2");
+
 var express = require("express"),
+    mongoose = require("mongoose"),
     session = require("express-session"),
     passport = require("passport"),
     SpotifyStrategy = require("passport-spotify").Strategy,
@@ -8,7 +11,10 @@ var express = require("express"),
 require("dotenv").config();
 
 var port = 8888;
-var authCallbackPath = "/callback";
+const authCallbackPath = "/callback";
+const connectionString = config.connectionString;
+
+mongoose.connect(connectionString, {useUnifiedTopology: true, useNewUrlParser: true});
 
 passport.serializeUser(function (user, done) {
   done(null, user);
@@ -26,13 +32,7 @@ passport.use(
       callbackURL: "http://localhost:" + port + authCallbackPath,
     },
     function (accessToken, refreshToken, expires_in, profile, done) {
-      process.nextTick(function () {
-        // To keep the example simple, the user's spotify profile is returned to
-        // represent the logged-in user. In a typical application, you would want
-        // to associate the spotify account with a user record in your database,
-        // and return that user instead.
-        return done(null, profile);
-      });
+      return done(null, profile);
     }
   )
 );
@@ -44,7 +44,7 @@ app.set("views", __dirname + "/views");
 app.set("view engine", "html");
 
 app.use(
-  session({ secret: "ninja warrior", resave: true, saveUninitialized: true })
+  session({ secret: "ninjawarrior", resave: true, saveUninitialized: true })
 );
 
 app.use(passport.initialize());
@@ -54,6 +54,7 @@ app.engine("html", consolidate.nunjucks);
 
 // Routes
 app.get("/", function (req, res) {
+    console.log(req.user);
   res.render("index.html", { user: req.user });
 });
 
@@ -65,18 +66,12 @@ app.get("/login", function (req, res) {
   res.render("login.html", { user: req.user });
 });
 
-app.get(
-  "/auth/spotify",
-  passport.authenticate("spotify", {
-    scope: ["user-read-email", "user-read-private"],
-    showDialog: true,
-  })
-);
+app.get("/auth/spotify", passport.authenticate("spotify", {
+    scope: ["user-read-private", "user-library-read"],
+    showDialog: true
+}));
 
-app.get(
-  authCallbackPath,
-  passport.authenticate("spotify", { failureRedirect: "/login" }),
-  function (req, res) {
+app.get(authCallbackPath, passport.authenticate("spotify", { failureRedirect: "/login" }), function (req, res) {
     res.redirect("/");
   }
 );
@@ -91,7 +86,7 @@ app.listen(port, function () {
 });
 
 function ensureAuthenticated(req, res, next) {
-  if (req.isAuthenticated()) {
+  if(req.isAuthenticated()) {
     return next();
   }
   res.redirect("/login");
