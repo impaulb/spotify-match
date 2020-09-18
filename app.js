@@ -1,12 +1,13 @@
-const { connect } = require("http2");
+const port = 8888;
+const authCallbackPath = "/callback";
+const connectionString = config.connectionString;
+
 
 var express = require("express"),
-    ejs = require('ejs'),
     mongoose = require("mongoose"),
     session = require("express-session"),
     passport = require("passport"),
     SpotifyStrategy = require("passport-spotify").Strategy,
-    consolidate = require("consolidate"),
     expressSanitizer = require("express-sanitizer"),
     override = require("method-override"),
     bodyParser = require("body-parser"),
@@ -14,9 +15,11 @@ var express = require("express"),
     SpotifyAPI = require('spotify-web-api-node');
     User = require("./models/User.js");
 
+    require("dotenv").config();
+
+// Express set up
 var app = express();
 
-// configure Express
 app.set("view engine", "ejs");
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({extended: true}));
@@ -27,16 +30,13 @@ app.use(
   session({ secret: "ninjawarrior", resave: true, saveUninitialized: true })
 );
 
-var spotifyApi = new SpotifyAPI();
-
-require("dotenv").config();
-
-var port = 8888;
-const authCallbackPath = "/callback";
-const connectionString = config.connectionString;
-
+// MongoDB set up
 mongoose.connect(connectionString, {useUnifiedTopology: true, useNewUrlParser: true});
 
+// Spotify API set up
+var spotifyApi = new SpotifyAPI();
+
+// Passport set up
 passport.serializeUser(function (user, done) {
   done(null, user);
 });
@@ -75,14 +75,6 @@ app.get("/", function (req, res) {
   res.render("index", { user: req.user });
 });
 
-app.get("/account", ensureAuthenticated, function (req, res) {
-  res.render("account", { user: req.user });
-});
-
-app.get("/login", function (req, res) {
-  res.render("login", { user: req.user });
-});
-
 app.get("/auth/spotify", passport.authenticate("spotify", {
     scope: ["user-read-email", "user-read-private", "user-library-read"],
     showDialog: true
@@ -102,13 +94,9 @@ app.listen(port, function () {
   console.log("App is listening on port " + port);
 });
 
-function generateID(req, res, next) {
-  return Math.random().toString(36).substring(10);
-}
-
 function ensureAuthenticated(req, res, next) {
   if(req.isAuthenticated()) {
     return next();
   }
-  res.redirect("/login");
+  res.redirect("/");
 }

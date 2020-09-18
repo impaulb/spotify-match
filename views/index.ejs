@@ -9,12 +9,13 @@
 		<img src=<%=user.photos[0]%>>
 		<h3> Hi, <%=user.name%>!</p>
 		<h3> Your ID: <%=user.id%></p>
+		<p> <a href="/logout">Log out</a> </p>
 		<% user.library.forEach(function(trackObj){ %>
 			<img src=<%= trackObj.track.album.images[0].url%> width="50px">
 			<p><%= trackObj.track.name%></p>
 		<% }) %>
 		<%} else { %>
-		<p> Not Allowed </p>
+		<p> <a href="/auth/spotify">Login via Spotify</a> </p>
 		<% } %>
 </body>
 </html>
