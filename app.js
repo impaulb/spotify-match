@@ -1,8 +1,3 @@
-const port = 8888;
-const authCallbackPath = "/callback";
-const connectionString = config.connectionString;
-
-
 var express = require("express"),
     mongoose = require("mongoose"),
     session = require("express-session"),
@@ -16,6 +11,10 @@ var express = require("express"),
     User = require("./models/User.js");
 
     require("dotenv").config();
+
+const port = 8888;
+const authCallbackPath = "/callback";
+const connectionString = config.connectionString;
 
 // Express set up
 var app = express();
@@ -57,7 +56,13 @@ passport.use(
 
       spotifyApi.getMySavedTracks()
       .then(function(data) {
-        User.findOrCreate({ id: profile.id, name: profile.displayName, username: profile.email, library: data.body.items, photos: profile.photos }, function(err, user) {
+        User.findOrCreate({ id: profile.id }, function(err, user) {
+          user.name = profile.displayName;
+          user.library = data.body.items;
+          user.photos = profile.photos;
+
+          user.save(function(err){ if(err) { console.log(err) } })
+
           return done(err, user);
         });
       }, function(err) {
