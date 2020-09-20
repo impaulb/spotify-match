@@ -19,7 +19,7 @@ var express = require("express"),
 
     require("dotenv").config();
 
-const port = 8888;
+const port = process.env.PORT || 8888;
 const authCallbackPath = "/callback";
 const connectionString = config.connectionString;
 
@@ -85,7 +85,7 @@ passport.use(
     {
       clientID: config.clientID,
       clientSecret: config.clientSecret,
-      callbackURL: "http://localhost:" + port + authCallbackPath,
+      callbackURL: "https://spotify-match-app.herokuapp.com:" + authCallbackPath,
     },
 
     // Authenticate a user and pull their music library into database
