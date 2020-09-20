@@ -21,7 +21,7 @@ var express = require("express"),
 
 const port = process.env.PORT || 8888;
 const authCallbackPath = "/callback";
-const connectionString = config.connectionString;
+const connectionString = process.env.connectionString;
 
 // Express set up
 var app = express();
@@ -83,8 +83,8 @@ async function getSongsOfSelectedPage(accessToken, offset){
 passport.use(
   new SpotifyStrategy(
     {
-      clientID: config.clientID,
-      clientSecret: config.clientSecret,
+      clientID: process.env.clientID,
+      clientSecret: process.env.clientSecret,
       callbackURL: "https://spotify-match-app.herokuapp.com:" + authCallbackPath,
     },
 
