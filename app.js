@@ -1,5 +1,8 @@
 // BUG: entering blank into user ID causes crash
 
+const { resolve, all } = require("bluebird");
+const { pathMatch } = require("tough-cookie");
+
 var express = require("express"),
     mongoose = require("mongoose"),
     session = require("express-session"),
@@ -9,7 +12,9 @@ var express = require("express"),
     override = require("method-override"),
     bodyParser = require("body-parser"),
     config = require('./config.json'),
-    SpotifyAPI = require('spotify-web-api-node');
+    Promise = require('bluebird'),
+    request = require('request-promise-native'),
+    SpotifyAPI = require('spotify-web-api-node'),
     User = require("./models/User.js");
 
     require("dotenv").config();
@@ -46,6 +51,35 @@ passport.deserializeUser(function (obj, done) {
   done(null, obj);
 });
 
+async function getSongsOfSelectedPage(accessToken){
+  return new Promise(resolve => {
+    const userLibrary = request({
+      method: 'GET',
+      uri: `https://api.spotify.com/v1/me/tracks?limit=1`,
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      },
+      json: true
+      });
+    resolve(userLibrary.total);
+  });
+}
+
+async function getSongsOfSelectedPage(accessToken, offset){
+  return new Promise(resolve => {
+    const userLibrary = request({
+      method: 'GET',
+      uri: `https://api.spotify.com/v1/me/tracks?limit=50&offset=${offset}`,
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      },
+      json: true
+      });
+    resolve(userLibrary);
+  });
+}
+
+
 passport.use(
   new SpotifyStrategy(
     {
@@ -53,24 +87,47 @@ passport.use(
       clientSecret: config.clientSecret,
       callbackURL: "http://localhost:" + port + authCallbackPath,
     },
-    function (accessToken, refreshToken, expires_in, profile, done) {
-      spotifyApi.setAccessToken(accessToken);
 
-      spotifyApi.getMySavedTracks()
-      .then(function(data) {
+    // Authenticate a user and pull their music library into database
+    async function (accessToken, refreshToken, expires_in, profile, done) {
+      spotifyApi.setAccessToken(accessToken);
+      
+      var promises = [];
+      let i = 0;
+
+      const libraryLengthWrapper = await request({
+        method: 'GET',
+        uri: `https://api.spotify.com/v1/me/tracks?limit=1`,
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        },
+        json: true
+      });
+      const libraryLength = libraryLengthWrapper.total;
+
+      while(i < libraryLength/50){
+        promises.push(new Promise((resolve) => {
+          let songs = getSongsOfSelectedPage(accessToken, i * 50);
+          resolve(songs);
+        }));
+        i++;
+      }
+
+      Promise.map(promises, Promise.props)
+      .then(results => {
+        var userLibraryOfSongIDs = [];
+        results.forEach(function(result){
+          result.items.forEach(function(trackWrapper){
+            userLibraryOfSongIDs.push(trackWrapper.track.id);
+          });
+        })
         User.findOrCreate({ username: profile.id }, function(err, user) {
           user.name = profile.displayName;
-          data.body.items.forEach(function(trackWrapper){
-            user.library.push(trackWrapper.track.id);
-          });
           user.photos = profile.photos;
-
+          user.library = userLibraryOfSongIDs;
           user.save(function(err){ if(err) { console.log(err) } })
-
           return done(err, user);
         });
-      }, function(err) {
-        console.log('Something went wrong!', err);
       });
     }
   )
