@@ -1,3 +1,5 @@
+// BUG: entering blank into user ID causes crash
+
 var express = require("express"),
     mongoose = require("mongoose"),
     session = require("express-session"),
@@ -82,6 +84,7 @@ app.get("/", function (req, res) {
   res.render("index", { user: req.user });
 });
 
+// TO DO: OPTIMIZE THIS MONSTROUSITY
 app.post("/finduser", function(req, res){
   User.findOne({username: req.body.id}, function(err, user){
     if(err){
@@ -91,12 +94,24 @@ app.post("/finduser", function(req, res){
       var songsInCommon = [];
 
       req.user.library.forEach(function(track){
-        if(searchedLibrary.includes(track) && !songsInCommon.includes(track)){
-          songsInCommon.push(track);
+        var editedID = "spotify:track:" + track;
+        if(searchedLibrary.includes(track) && !songsInCommon.includes(editedID)){
+          songsInCommon.push(editedID);
         }
       });
 
-      console.log(songsInCommon);
+      spotifyApi.createPlaylist(req.user.username, 'Spotify Match: ' + user.name + ' & ' + req.user.name, { 'public' : false })
+      .then(function(data) {
+        spotifyApi.addTracksToPlaylist(data.body.id, songsInCommon)
+        .then(function(data) {
+          console.log('Added tracks to playlist!');
+        }, function(err) {
+          console.log('Something went wrong (adding tracks)!', err);
+        });
+      }, function(err) {
+        console.log('Something went wrong (creating playlist)!', err);
+      });
+      
     }
   })
 
@@ -104,11 +119,11 @@ app.post("/finduser", function(req, res){
 });
 
 app.get("/auth/spotify", passport.authenticate("spotify", {
-    scope: ["user-library-modify", "user-read-email", "user-read-private", "user-library-read"],
+    scope: ["user-read-email", "user-read-private", "user-library-read", "playlist-modify-public", "playlist-modify-private", "playlist-read-private"],
     showDialog: true
 }));
 
-app.get(authCallbackPath, passport.authenticate("spotify", { failureRedirect: "/login" }), function (req, res) {
+app.get(authCallbackPath, passport.authenticate("spotify", { failureRedirect: "/" }), function (req, res) {
     res.redirect("/");
   }
 );

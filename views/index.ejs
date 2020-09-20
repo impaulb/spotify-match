@@ -16,9 +16,6 @@
 		<h3> Hi, <%=user.name%>!</p>
 		<h3> Your ID: <%=user.username%></p>
 		<p> <a href="/logout">Log out</a> </p>
-		<% user.library.forEach(function(trackObj){ %>
-			<p>Track ID: <%=trackObj%></p>
-		<% }) %>
 		<%} else { %>
 		<p> <a href="/auth/spotify">Login via Spotify</a> </p>
 		<% } %>
