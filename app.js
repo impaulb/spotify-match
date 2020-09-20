@@ -160,12 +160,12 @@ app.post("/finduser", function(req, res){
       .then(function(data) {
         spotifyApi.addTracksToPlaylist(data.body.id, songsInCommon)
         .then(function(data) {
-          console.log('['+user.name+']: Added tracks to playlist!');
+          console.log('['+req.user.name+']: Added tracks to playlist!');
         }, function(err) {
-          console.log('['+user.name+']: Something went wrong (adding tracks)!', err);
+          console.log('['+req.user.name+']: Something went wrong (adding tracks)!', err);
         });
       }, function(err) {
-        console.log('['+user.name+']: Something went wrong (creating playlist)!', err);
+        console.log('['+req.user.name+']: Something went wrong (creating playlist)!', err);
       });
       
     }
