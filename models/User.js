@@ -8,7 +8,7 @@ var userSchema = new mongoose.Schema({
   username: String,
   name: String,
   photos: [],
-  library: [{}]
+  library: []
 });
 
 userSchema.plugin(passportLocalMongoose);

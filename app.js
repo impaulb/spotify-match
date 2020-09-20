@@ -58,7 +58,9 @@ passport.use(
       .then(function(data) {
         User.findOrCreate({ username: profile.id }, function(err, user) {
           user.name = profile.displayName;
-          user.library = data.body.items;
+          data.body.items.forEach(function(trackWrapper){
+            user.library.push(trackWrapper.track.id);
+          });
           user.photos = profile.photos;
 
           user.save(function(err){ if(err) { console.log(err) } })
@@ -80,8 +82,29 @@ app.get("/", function (req, res) {
   res.render("index", { user: req.user });
 });
 
+app.post("/finduser", function(req, res){
+  User.findOne({username: req.body.id}, function(err, user){
+    if(err){
+      console.log(err);
+    } else {
+      var searchedLibrary = user.library;
+      var songsInCommon = [];
+
+      req.user.library.forEach(function(track){
+        if(searchedLibrary.includes(track) && !songsInCommon.includes(track)){
+          songsInCommon.push(track);
+        }
+      });
+
+      console.log(songsInCommon);
+    }
+  })
+
+  res.redirect("/");
+});
+
 app.get("/auth/spotify", passport.authenticate("spotify", {
-    scope: ["user-read-email", "user-read-private", "user-library-read"],
+    scope: ["user-library-modify", "user-read-email", "user-read-private", "user-library-read"],
     showDialog: true
 }));
 
