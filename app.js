@@ -146,28 +146,31 @@ app.post("/finduser", function(req, res){
     if(err){
       console.log(err);
     } else {
-      var searchedLibrary = user.library;
-      var songsInCommon = [];
+      if(user){
+        var searchedLibrary = user.library;
+        var songsInCommon = [];
 
-      req.user.library.forEach(function(track){
-        var editedID = "spotify:track:" + track;
-        if(searchedLibrary.includes(track) && !songsInCommon.includes(editedID)){
-          songsInCommon.push(editedID);
-        }
-      });
-
-      spotifyApi.createPlaylist(req.user.username, 'Spotify Match: ' + user.name + ' & ' + req.user.name, { 'public' : false })
-      .then(function(data) {
-        spotifyApi.addTracksToPlaylist(data.body.id, songsInCommon)
-        .then(function(data) {
-          console.log('['+req.user.name+']: Added tracks to playlist!');
-        }, function(err) {
-          console.log('['+req.user.name+']: Something went wrong (adding tracks)!', err);
+        req.user.library.forEach(function(track){
+          var editedID = "spotify:track:" + track;
+          if(searchedLibrary.includes(track) && !songsInCommon.includes(editedID)){
+            songsInCommon.push(editedID);
+          }
         });
-      }, function(err) {
-        console.log('['+req.user.name+']: Something went wrong (creating playlist)!', err);
-      });
-      
+
+        spotifyApi.createPlaylist(req.user.username, 'Spotify Match: ' + user.name + ' & ' + req.user.name, { 'public' : false })
+        .then(function(data) {
+          spotifyApi.addTracksToPlaylist(data.body.id, songsInCommon)
+          .then(function(data) {
+            console.log('['+req.user.name+']: Added tracks to playlist!');
+          }, function(err) {
+            console.log('['+req.user.name+']: Something went wrong (adding tracks)!', err);
+          });
+        }, function(err) {
+          console.log('['+req.user.name+']: Something went wrong (creating playlist)!', err);
+        });
+      } else {
+        console.log('[' + req.user.name + ']: This user does not exist');
+      }
     }
   })
 
