@@ -1,6 +1,7 @@
 // BUG: entering blank into user ID causes crash
 
 const { resolve, all } = require("bluebird");
+const { lib } = require("nunjucks");
 const { pathMatch } = require("tough-cookie");
 
 var express = require("express"),
@@ -51,25 +52,19 @@ passport.deserializeUser(function (obj, done) {
   done(null, obj);
 });
 
-async function getSongsOfSelectedPage(accessToken){
-  return new Promise(resolve => {
-    const userLibrary = request({
-      method: 'GET',
-      uri: `https://api.spotify.com/v1/me/tracks?limit=1`,
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      },
-      json: true
-      });
-    resolve(userLibrary.total);
-  });
-}
 
-async function getSongsOfSelectedPage(accessToken, offset){
+/**
+ * Returns a page of the user library
+ * @param  {string} accessToken Spotify API's access token
+ * @param {number} offset Specify the number of songs to skip when reading
+ * @param {number} limit Specify how many songs to return
+ * @return {Promise} A promise which contains the specified portion of the user library
+ */
+async function getDataOfPage(accessToken, offset, limit){
   return new Promise(resolve => {
     const userLibrary = request({
       method: 'GET',
-      uri: `https://api.spotify.com/v1/me/tracks?limit=50&offset=${offset}`,
+      uri: `https://api.spotify.com/v1/me/tracks?limit=${limit}&offset=${offset}`,
       headers: {
         Authorization: `Bearer ${accessToken}`
       },
@@ -79,7 +74,7 @@ async function getSongsOfSelectedPage(accessToken, offset){
   });
 }
 
-
+// Use Passport.JS Spotify strategy to authenticate user into the app
 passport.use(
   new SpotifyStrategy(
     {
@@ -90,29 +85,36 @@ passport.use(
 
     // Authenticate a user and pull their music library into database
     async function (accessToken, refreshToken, expires_in, profile, done) {
+
+      // Set Spotify API wrapper's access token
       spotifyApi.setAccessToken(accessToken);
-      
-      var promises = [];
-      let i = 0;
 
-      const libraryLengthWrapper = await request({
-        method: 'GET',
-        uri: `https://api.spotify.com/v1/me/tracks?limit=1`,
-        headers: {
-          Authorization: `Bearer ${accessToken}`
+      // Get user's library length using a Spotify API call
+      var libraryLength;
+      getDataOfPage(accessToken, 0, 1).then(
+        function(data){
+          libraryLength = data.total;
         },
-        json: true
-      });
-      const libraryLength = libraryLengthWrapper.total;
+        function(err){
+          console.log(err);
+        }
+      );
 
-      while(i < libraryLength/50){
+      // Array of promises resolving to the user's entire song library
+      var promises = [];
+
+      // Loop to get the entire user's library
+      // NOTE: Spotify's API limits the number of songs returned to 50
+      // so this has to be done to circumvent that
+      for(let i = 0; i < libraryLength/50; i++){
         promises.push(new Promise((resolve) => {
-          let songs = getSongsOfSelectedPage(accessToken, i * 50);
+          let songs = getDataOfPage(accessToken, i * 50, 50);
           resolve(songs);
         }));
-        i++;
       }
 
+      // Construct user's entire song library from resolved Promises
+      // and extract song IDs to store
       Promise.map(promises, Promise.props)
       .then(results => {
         var userLibraryOfSongIDs = [];
@@ -121,6 +123,8 @@ passport.use(
             userLibraryOfSongIDs.push(trackWrapper.track.id);
           });
         })
+
+        // Find or create a user using all of the specified data
         User.findOrCreate({ username: profile.id }, function(err, user) {
           user.name = profile.displayName;
           user.photos = profile.photos;
