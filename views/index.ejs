@@ -6,7 +6,7 @@
 <body>
 	<h2>Welcome to Spotify Match!</h2>
 	<% if (user) { %>
-		<p> <a href="<%= "/user/" + user.appID %>"</a>Go to your user page</a> </p>
+		<p> <a href="<%= "/user/" + user.username %>"</a>Go to your user page</a> </p>
 	<%} else { %>
 		<p> <a href="/auth/spotify">Login via Spotify</a> </p>
 	<% } %>

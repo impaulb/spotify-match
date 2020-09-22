@@ -6,22 +6,12 @@
 <body>
 	<h2>Welcome to Spotify Match!</h2>
 	<img src=<%=user.photos[0]%>>
-
-	<form action="/finduser" method="POST">
-		<input placeholder="User ID" name="id">
-		<button type="submit">Find</button>
-	</form>
-
 	<h2> Hi, <%=user.name%>!</h2>
 	<h4 id="id_text"> Your ID: <%=user.appID%></h4>
-	
-	<form action=<%= "/user/" + user.username + "/changeID" %> method="POST">
+	<form action=<%= "/user/" + user.username + "/change" %> method="POST">
 		<input name="newID" value="<%=user.appID%>">
-		<button type="submit">Save ID</button> 
+		<button type="submit">Change ID</button> 
 	</form>
-	<p> <a href="/logout">Log out</a> </p>
-
-	<script>
-	</script>
+	<p><a href=<%= "/user/" + user.username + "/create" %> >Create Playlist</a> <a href="/logout">Log out</a></p>
 </body>
 </html>

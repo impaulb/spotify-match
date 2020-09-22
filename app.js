@@ -58,7 +58,7 @@ passport.deserializeUser(function (obj, done) {
  * @param {String} user2_name Name of the second user for title of playlist
  * @return Nothing
  */
-function createPlaylist(songIDs, user1, user2_name){
+function _createPlaylist(songIDs, user1, user2_name){
 
   // Check if the list of song IDs is empty
   if(!songIDs[0]){
@@ -95,7 +95,7 @@ function createPlaylist(songIDs, user1, user2_name){
  * @param {number} limit Specify how many songs to return
  * @return {Promise} A promise which contains the specified portion of the user library
  */
-async function getDataOfPage(accessToken, offset, limit){
+async function _getDataOfPage(accessToken, offset, limit){
   return new Promise(resolve => {
     const userLibrary = request({
       method: 'GET',
@@ -107,6 +107,22 @@ async function getDataOfPage(accessToken, offset, limit){
       });
     resolve(userLibrary);
   });
+}
+
+
+// TO DO: ADD UNIQuE USER VALIDATION
+/**
+ * Validate a user's ID
+ * @param  {String} id User ID to validate
+ * @return {Boolean} Return if the id is valid or not
+ */
+function _validateID(id){
+  if(/^[a-z0-9]+$/i.test(id) && id.length > 3){
+    return true;
+  } else {
+    console.log("ID must be alphanumeric and longer than 3 characters!");
+    return false;
+  }
 }
 
 // Use Passport.JS Spotify strategy to authenticate user into the app
@@ -126,7 +142,7 @@ passport.use(
 
       // Get user's library length using a Spotify API call
       var libraryLength;
-      getDataOfPage(accessToken, 0, 1)
+      _getDataOfPage(accessToken, 0, 1)
 
       // Retrieving library length asynchronously
       .then(
@@ -149,7 +165,7 @@ passport.use(
           // so this has to be done to circumvent that
           for(let i = 0; i < libraryLength/50; i++){
             promises.push(new Promise((resolve) => {
-              let songs = getDataOfPage(accessToken, i * 50, 50);
+              let songs = _getDataOfPage(accessToken, i * 50, 50);
               resolve(songs);
             }));
           }
@@ -191,42 +207,42 @@ app.get("/", function (req, res) {
 
 // Render individual user page based on their ID
 app.get("/user/:username", ensureAuthenticated, function(req, res){
-  if(req.user.username === req.params.username){
-    User.findOne({username: req.params.username}, function(err, user){
-      res.render("user", { user: user });
+  User.findOne({username: req.params.username}, function(err, user){
+    res.render("user", { user: user });
+  });
+});
+
+// Render individual user page based on their ID
+app.get("/user/:username/create", ensureAuthenticated, function(req, res){
+  res.render("create", {user: req.user});
+});
+
+// Change an individual's app ID
+app.post("/user/:username/change", ensureAuthenticated, function(req, res){
+  var submittedID = req.sanitize(req.body.newID);
+  if(_validateID(submittedID)){
+    User.findOne({ username: req.user.username }, function(err, user){
+      if(err){
+        console.log(err);
+      }
+      user.appID = submittedID;
+      user.save(function(err){
+        if(err){
+            console.log(err);
+        }
+      res.redirect("/user/" + req.user.username);
+      });
     });
   } else {
     res.redirect("/user/" + req.user.username);
   }
 });
 
-// Change an individual's app ID
-app.post("/user/:username/changeID", ensureAuthenticated, function(req, res){
-  if(req.user.username === req.params.username){
-    var newID = req.body.newID;
-
-    // TO DO: add verification to ensure the app ID is not duplicated
-    User.findOne({ username: req.user.username }, function(err, user){
-      user.appID = newID;
-      user.save(function(err){
-        if(err){
-          console.log(err);
-        }
-        res.redirect("/user/" + req.user.username);
-      });
-    });
-  } else {
-    res.redirect("/");
-  }
-});
-
 // Find user based on submitted ID
 app.post("/finduser", function(req, res){
-  User.findOne({appID: req.body.id}, function(err, user){
-    if(err){
-      console.log(err);
-    } else {
-
+  var submittedID = req.sanitize(req.body.id);
+  User.findOne({appID: submittedID}, function(err, user){
+    if(user){
       // Check if the found user has songs in their library
       if(user.library){
         var songsInCommon = [];
@@ -238,13 +254,15 @@ app.post("/finduser", function(req, res){
             songsInCommon.push(editedID);
           }
         });
-        createPlaylist(songsInCommon, req.user, user.name);
+        _createPlaylist(songsInCommon, req.user, user.name);
       }
+    } else {
+      console.log("This user does not exist!");
     }
   })
 
   // TO DO: redirect to a page which has some user feedback.
-  res.redirect("/");
+  res.redirect("/user/" + req.user.username + "/create");
 });
 
 // Authentication for spotify
@@ -254,7 +272,7 @@ app.get("/auth/spotify", passport.authenticate("spotify", {
 }));
 
 app.get(authCallbackPath, passport.authenticate("spotify", { failureRedirect: "/" }), function (req, res) {
-    res.redirect("/");
+    res.redirect("/user/" + req.user.username);
   }
 );
 
@@ -272,7 +290,7 @@ app.listen(port, function () {
 });
 
 function ensureAuthenticated(req, res, next) {
-  if(req.isAuthenticated()) {
+  if(req.isAuthenticated() && req.user.username === req.params.username) {
     return next();
   }
   res.redirect("/");
