@@ -170,7 +170,7 @@ app.post("/finduser", function(req, res){
             songsInCommon.push(editedID);
           }
         });
-        createPlaylist(songsInCommon, req.user, user);
+        createPlaylist(songsInCommon, req.user, user.name);
       }
     }
   })
@@ -179,13 +179,20 @@ app.post("/finduser", function(req, res){
   res.redirect("/");
 });
 
-function createPlaylist(songIDs, user1, user2){
+/**
+ * Create a playlist on Spotify for a user
+ * @param  {Array} songIDs Array of SongIDs (formatted) to add to playlist
+ * @param {req.user} user1 User object who will be the owner
+ * @param {String} user2_name Name of the second user for title of playlist
+ * @return Nothing
+ */
+function createPlaylist(songIDs, user1, user2_name){
 
   // Check if the list of song IDs is empty
   if(!songIDs[0]){
     console.log("You don't have any songs in common!");
   } else {
-    spotifyApi.createPlaylist(user1.username, 'Spotify Match: ' + user2.name + ' & ' + user1.name, { 'public' : false })
+    spotifyApi.createPlaylist(user1.username, 'Spotify Match: ' + user2_name + ' & ' + user1.name, { 'public' : false })
     .then(function(data) {
 
       // Add playlist ID to user's storage to display later
@@ -209,6 +216,7 @@ function createPlaylist(songIDs, user1, user2){
   }
 }
 
+// Authentication for spotify
 app.get("/auth/spotify", passport.authenticate("spotify", {
     scope: ["user-read-email", "user-read-private", "user-library-read", "playlist-modify-public", "playlist-modify-private", "playlist-read-private"],
     showDialog: true
