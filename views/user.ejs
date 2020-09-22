@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Spotify Match</title>
+</head>
+<body>
+	<h2>Welcome to Spotify Match!</h2>
+	<img src=<%=user.photos[0]%>>
+
+	<form action="/finduser" method="POST">
+		<input placeholder="User ID" name="id">
+		<button type="submit">Find</button>
+	</form>
+
+	<h3> Hi, <%=user.name%>!</p>
+	<h3> Your ID: <%=user.username%></p>
+	<p> <a href="/logout">Log out</a> </p>
+</body>
+</html>
