@@ -12,8 +12,16 @@
 		<button type="submit">Find</button>
 	</form>
 
-	<h3> Hi, <%=user.name%>!</p>
-	<h3> Your ID: <%=user.username%></p>
+	<h2> Hi, <%=user.name%>!</h2>
+	<h4 id="id_text"> Your ID: <%=user.appID%></h4>
+	
+	<form action=<%= "/user/" + user.username + "/changeID" %> method="POST">
+		<input name="newID" value="<%=user.appID%>">
+		<button type="submit">Save ID</button> 
+	</form>
 	<p> <a href="/logout">Log out</a> </p>
+
+	<script>
+	</script>
 </body>
 </html>

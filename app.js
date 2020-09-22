@@ -170,6 +170,7 @@ passport.use(
               user.name = profile.displayName;
               user.photos = profile.photos;
               user.library = userLibraryOfSongIDs;
+              if(!user.appID){ user.appID = profile.id }
               user.save(function(err){ if(err) { console.log(err) } });
               return done(err, user);
             });
@@ -189,17 +190,39 @@ app.get("/", function (req, res) {
 });
 
 // Render individual user page based on their ID
-app.get("/user/:userID", ensureAuthenticated, function(req, res){
-  if(req.user.username === req.params.userID){
-    res.render("user", { user: req.user });
+app.get("/user/:username", ensureAuthenticated, function(req, res){
+  if(req.user.username === req.params.username){
+    User.findOne({username: req.params.username}, function(err, user){
+      res.render("user", { user: user });
+    });
   } else {
     res.redirect("/user/" + req.user.username);
   }
 });
 
+// Change an individual's app ID
+app.post("/user/:username/changeID", ensureAuthenticated, function(req, res){
+  if(req.user.username === req.params.username){
+    var newID = req.body.newID;
+
+    // TO DO: add verification to ensure the app ID is not duplicated
+    User.findOne({ username: req.user.username }, function(err, user){
+      user.appID = newID;
+      user.save(function(err){
+        if(err){
+          console.log(err);
+        }
+        res.redirect("/user/" + req.user.username);
+      });
+    });
+  } else {
+    res.redirect("/");
+  }
+});
+
 // Find user based on submitted ID
 app.post("/finduser", function(req, res){
-  User.findOne({username: req.body.id}, function(err, user){
+  User.findOne({appID: req.body.id}, function(err, user){
     if(err){
       console.log(err);
     } else {
