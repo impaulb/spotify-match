@@ -72,6 +72,7 @@ function _createPlaylist(songIDs, user1, user2_name){
         user.save(function(err){ if(err) { console.log(err) } });
       });
 
+      console.log("here!");
       // Populate the new playlist with songs in common
       spotifyApi.addTracksToPlaylist(data.body.id, songIDs)
       .then(function(data) {
@@ -253,6 +254,7 @@ app.post("/finduser", function(req, res){
             songsInCommon.push(editedID);
           }
         });
+        console.log(songsInCommon);
         _createPlaylist(songsInCommon, req.user, user.name);
       }
     } else {
