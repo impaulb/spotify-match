@@ -6,18 +6,9 @@
 <body>
 	<h2>Welcome to Spotify Match!</h2>
 	<% if (user) { %>
-		<img src=<%=user.photos[0]%>>
-
-		<form action="/finduser" method="POST">
-			<input placeholder="User ID" name="id">
-			<button type="submit">Find</button>
-		</form>
-
-		<h3> Hi, <%=user.name%>!</p>
-		<h3> Your ID: <%=user.username%></p>
-		<p> <a href="/logout">Log out</a> </p>
-		<%} else { %>
+		<p> <a href="<%= "/user/" + user.username %>"</a>Go to your user page</a> </p>
+	<%} else { %>
 		<p> <a href="/auth/spotify">Login via Spotify</a> </p>
-		<% } %>
+	<% } %>
 </body>
 </html>

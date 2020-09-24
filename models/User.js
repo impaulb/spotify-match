@@ -6,9 +6,11 @@ var findOrCreate = require('mongoose-findorcreate');
 // SCHEMA
 var userSchema = new mongoose.Schema({
   username: String,
+  appID: String,
   name: String,
   photos: [],
-  library: []
+  library: [],
+  spotify_match_playlists: []
 });
 
 userSchema.plugin(passportLocalMongoose);
