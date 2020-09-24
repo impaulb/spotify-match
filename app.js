@@ -63,6 +63,15 @@ function _createPlaylist(songIDs, user1, user2_name){
   if(!songIDs[0]){
     console.log("You don't have any songs in common!");
   } else {
+
+    // Must have this to ensure the app doesn't crash
+    // Spotify API can't handle more than 50.
+    // Should be able to fix it by running a for loop.
+    if(songIDs.length > 50){
+      songIDs = songIDs.slice(0, 49);
+      console.log("You had more than 50 songs in common, that is more than the free limit!");
+    }
+
     spotifyApi.createPlaylist(user1.username, 'Spotify Match: ' + user2_name + ' & ' + user1.name, { 'public' : false })
     .then(function(data) {
 
@@ -72,7 +81,6 @@ function _createPlaylist(songIDs, user1, user2_name){
         user.save(function(err){ if(err) { console.log(err) } });
       });
 
-      console.log("here!");
       // Populate the new playlist with songs in common
       spotifyApi.addTracksToPlaylist(data.body.id, songIDs)
       .then(function(data) {
@@ -254,7 +262,6 @@ app.post("/finduser", function(req, res){
             songsInCommon.push(editedID);
           }
         });
-        console.log(songsInCommon);
         _createPlaylist(songsInCommon, req.user, user.name);
       }
     } else {
