@@ -1,14 +1,10 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Spotify Match</title>
-</head>
-<body>
-	<h4>Search for another user by ID to create a playlist</h4>
-	<form action="/finduser" method="POST">
-		<input placeholder="User ID" name="id">
-		<button type="submit">Find</button>
-	</form>
-	<p><a href=<%= "/user/" + user.username %> >Your Page</a> <a href="/logout">Log out</a></p>
-</body>
-</html>
+<%- include("./partials/header") %>
+
+<h4>Search for another user by ID to create a playlist</h4>
+<form action="/finduser" method="POST">
+	<input placeholder="User ID" name="id">
+	<button type="submit">Find</button>
+</form>
+<p><a href=<%= "/user/" + user.username %> >Your Page</a> <a href="/logout">Log out</a></p>
+
+<%- include("./partials/header") %>

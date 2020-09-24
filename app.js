@@ -15,6 +15,7 @@ var express = require("express"),
     config = require('./config.json'),
     Promise = require('bluebird'),
     request = require('request-promise-native'),
+    flash = require('connect-flash'),
     SpotifyAPI = require('spotify-web-api-node'),
     User = require("./models/User.js");
 
@@ -35,6 +36,14 @@ app.use(override("_method"));
 app.use(session({ secret: "ninjawarrior", resave: true, saveUninitialized: true }));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(flash());
+
+// Flash set up
+app.use(function(req, res, next){
+  res.locals.error = req.flash("error");
+  res.locals.success = req.flash("success");
+  next();
+});
 
 // MongoDB
 mongoose.connect(connectionString, {useUnifiedTopology: true, useNewUrlParser: true});
@@ -70,7 +79,7 @@ function _createPlaylist(songIDs, user1, user2_name){
       // Add playlist ID to user's storage to display later
       User.findOne({username: user1.username}, function(err, user){
         user.spotify_match_playlists.push(data.body.uri);
-        user.save(function(err){ if(err) { console.log(err) } });
+        user.save(function(err){ if(err) { req.flash("error", err); console.log(err) } });
       });
 
       // Populate the new playlist with songs in common
@@ -109,20 +118,32 @@ async function _getDataOfPage(accessToken, offset, limit){
   });
 }
 
-
-// TO DO: ADD UNIQuE USER VALIDATION
 /**
  * Validate a user's ID
  * @param  {String} id User ID to validate
  * @return {Boolean} Return if the id is valid or not
  */
 function _validateID(id){
-  if(/^[a-z0-9]+$/i.test(id) && id.length > 3){
-    return true;
-  } else {
-    console.log("ID must be alphanumeric and longer than 3 characters!");
-    return false;
-  }
+  return(/^[a-z0-9]+$/i.test(id) && id.length > 3);
+}
+
+/**
+ * Validate a user's ID to be unique
+ * @param  {String} id User ID to validate
+ * @return {Boolean} Return if the id is unqiue or not
+ */
+function _uniqueID(id){
+  User.findOne({appID: id}, function(err, user){
+    if(err){
+      req.flash("error", err);
+      console.log(err);
+    }
+    if(user){
+      return false;
+    } else {
+      return true;
+    }
+  });
 }
 
 // Use Passport.JS Spotify strategy to authenticate user into the app
@@ -150,6 +171,7 @@ passport.use(
           libraryLength = data.total;
         },
         function(err){
+          req.flash("error", err);
           console.log(err);
         }
       )
@@ -187,12 +209,13 @@ passport.use(
               user.photos = profile.photos;
               user.library = userLibraryOfSongIDs;
               if(!user.appID){ user.appID = profile.id }
-              user.save(function(err){ if(err) { console.log(err) } });
+              user.save(function(err){ if(err) { req.flash("error", err); console.log(err) } });
               return done(err, user);
             });
           });
         },
         function(err){
+          req.flash("error", err);
           console.log(err);
         }
       )
@@ -212,7 +235,7 @@ app.get("/user/:username", ensureAuthenticated, function(req, res){
   });
 });
 
-// Render individual user page based on their ID
+// Render the page to create new playlists
 app.get("/user/:username/create", ensureAuthenticated, function(req, res){
   res.render("create", {user: req.user});
 });
@@ -221,19 +244,28 @@ app.get("/user/:username/create", ensureAuthenticated, function(req, res){
 app.post("/user/:username/change", ensureAuthenticated, function(req, res){
   var submittedID = req.sanitize(req.body.newID);
   if(_validateID(submittedID)){
-    User.findOne({ username: req.user.username }, function(err, user){
-      if(err){
-        console.log(err);
-      }
-      user.appID = submittedID;
-      user.save(function(err){
+    if(_uniqueID(submittedID)){
+      User.findOne({ username: req.user.username }, function(err, user){
         if(err){
-            console.log(err);
+          req.flash("error", err);
+          console.log(err);
         }
-      res.redirect("/user/" + req.user.username);
+        user.appID = submittedID;
+        user.save(function(err){
+          if(err){
+              req.flash("error", err);
+              console.log(err);
+          }
+        req.flash("success", "Your ID has been updated! New ID: " + submittedID + ".");
+        res.redirect("/user/" + req.user.username);
+        });
       });
-    });
+    } else {
+      req.flash("error", "ID must be unique.");
+      res.redirect("/user/" + req.user.username);
+    }
   } else {
+    req.flash("error", "ID must be alphanumeric and longer than 3 characters.");
     res.redirect("/user/" + req.user.username);
   }
 });
@@ -257,7 +289,7 @@ app.post("/finduser", function(req, res){
         _createPlaylist(songsInCommon, req.user, user.name);
       }
     } else {
-      console.log("This user does not exist!");
+      req.flash("error", "This user does not exist!");
     }
   })
 
@@ -272,16 +304,19 @@ app.get("/auth/spotify", passport.authenticate("spotify", {
 }));
 
 app.get(authCallbackPath, passport.authenticate("spotify", { failureRedirect: "/" }), function (req, res) {
+    req.flash("success", "You are logged in. Welcome, " + req.user.name + "!");
     res.redirect("/user/" + req.user.username);
   }
 );
 
 app.get("/logout", function (req, res) {
   req.logout();
+  req.flash("success", "You have been logged out.");
   res.redirect("/");
 });
 
 app.get("*", function(req, res){
+  req.flash("error", "The page you specified does not exist!");
   res.redirect("/");
 });
 
@@ -293,5 +328,6 @@ function ensureAuthenticated(req, res, next) {
   if(req.isAuthenticated() && req.user.username === req.params.username) {
     return next();
   }
+  req.flash("error", "You do not have permission to view that page.");
   res.redirect("/");
 }
