@@ -2,16 +2,20 @@
 <html>
 <head>
     <title>Spotify Match</title>
+    <link rel="stylesheet" href="https://use.typekit.net/hks1hdk.css">
+    <link rel='stylesheet' href='/style.css' />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
 
 <% if(error && error.length > 0){ %>
-<div class="alert alert-danger" role="alert">
+
+<div class="flash-wrap error" role="alert">
     <p class="mb-0"><strong>Uh oh! </strong><%= error %></p>
 </div>
 <% } %>
 <% if(success && success.length > 0){ %>
-<div class="alert alert-success" role="alert">
+<div class="flash-wrap success" role="alert">
     <p class="mb-0"><strong>Nice! </strong><%= success %></p>
 </div>
 <% } %>

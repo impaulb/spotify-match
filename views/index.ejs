@@ -1,10 +1,19 @@
 <%- include("./partials/header") %>
 
-<h2>Welcome to Spotify Match!</h2>
-<% if (user) { %>
-	<p> <a href="<%= "/user/" + user.username %>"</a>Go to your user page</a> </p>
-<%} else { %>
-	<p> <a href="/auth/spotify">Login via Spotify</a> </p>
-<% } %>
+<div class="index-wrap">
+	<div class="header-wrap">
+		<h2 class="welcome-h">🤘 Spotify Match</h2>
+		<p>A project to help people bond over music<br>they have in common.</p>
+		<p class="sub">Created by <a target="_blank" href="https://paulboldyrev.me/">Paul Boldyrev</a></p>
+		<% if (user) { %>
+			<a href="<%= "/user/" + user.username %>" class="login-btn">Go to dashboard</a>
+		<%} else { %>
+			<a href="/auth/spotify" class="login-btn">Login via Spotify</a>
+		<% } %>
+	</div>
+	<div class="preview-wrap">
+		<img src="intro.png">
+	</div>
+</div>
 
 <%- include("./partials/footer") %>

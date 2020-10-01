@@ -1,13 +1,21 @@
 <%- include("./partials/header") %>
 
-<h2>Welcome to Spotify Match!</h2>
-<img src=<%=user.photos[0]%>>
-<h2> Hi, <%=user.name%>!</h2>
-<h4 id="id_text"> Your ID: <%=user.appID%></h4>
-<form action=<%= "/user/" + user.username + "/change" %> method="POST">
-	<input name="newID" value="<%=user.appID%>">
-	<button type="submit">Change ID</button> 
-</form>
-<p><a href=<%= "/user/" + user.username + "/create" %> >Create Playlist</a> <a href="/logout">Log out</a></p>
+<div class="dash-wrap">
+	<h2 class="main-h">🤘 Spotify Match</h2>
+	<div class="user-wrap">
+		<img class="user-img" src=<%=user.photos[0]%>>
+		<h3 class="user-name"> Hi, <%=user.name%>!</h2>
+	</div>
+	<h4 id="id_text"> Your ID: <%=user.appID%></h4>
+	<form action=<%= "/user/" + user.username + "/change" %> method="POST">
+		<input name="newID" value="<%=user.appID%>">
+		<button type="submit">Change ID</button> 
+	</form>
+	<form action=<%= "/user/" + user.username + "/create" %> method="POST">
+		<input placeholder="User ID" name="id">
+		<button type="submit">Create a Match</button>
+	</form>
+	<p><a href="/logout">Log out</a></p>
+</div>
 
 <%- include("./partials/footer") %>
