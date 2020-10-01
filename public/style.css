@@ -76,7 +76,6 @@ a:hover{
 .preview-wrap{
     position: relative;
     width: 50vw;
-    min-width: 350px;
 }
 
 .preview-wrap img{
@@ -121,3 +120,17 @@ a:hover{
 .user-name{
     display: relative;
 }
+
+@media only screen and (max-width: 1200px) {
+    .index-wrap {
+        margin: 0 auto;
+        position: relative;
+    }
+    .header-wrap {
+        margin: 7vw auto;
+        position: relative;
+    }
+    .preview-wrap{
+        display: none;
+    }
+  }
