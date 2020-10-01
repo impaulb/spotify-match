@@ -73,8 +73,8 @@ function _createPlaylist(songIDs, user1, user2_name){
   if(!songIDs[0]){
     console.log("You don't have any songs in common!");
   } else {
-    if(songIDs.length > 49){
-      songIDs = songIDs.slice(0, 49);
+    if(songIDs.length > 50){
+      songIDs = songIDs.slice(0, 50);
     }
     spotifyApi.createPlaylist(user1.username, 'Spotify Match: ' + user2_name + ' & ' + user1.name, { 'public' : false })
     .then(function(data) {
@@ -84,8 +84,6 @@ function _createPlaylist(songIDs, user1, user2_name){
         user.spotify_match_playlists.push(data.body.uri);
         user.save(function(err){ 
           if(err) { 
-            req.flash("error", err); 
-            res.redirect("/"); 
             console.log(err) 
           } 
         });
@@ -96,13 +94,11 @@ function _createPlaylist(songIDs, user1, user2_name){
       .then(function(data) {
         console.log('Successfully added songs!');
       }, function(err) {
-        req.flash("error", err); 
-        res.redirect("/");
         console.log('Something went wrong (adding tracks)!', err);
       });
-    }, function(err) {
-      req.flash("error", err); 
-      res.redirect("/");
+    },
+    
+    function(err) {
       console.log('Something went wrong (creating playlist)!', err);
     });
   }
@@ -145,11 +141,6 @@ function _validateID(id){
  */
 function _uniqueID(id){
   User.findOne({appID: id}, function(err, user){
-    if(err){
-      req.flash("error", err);
-      res.redirect("/");
-      console.log(err);
-    }
     if(user){
       return false;
     } else {
@@ -183,8 +174,6 @@ passport.use(
           libraryLength = data.total;
         },
         function(err){
-          req.flash("error", err);
-          res.redirect("/");
           console.log(err);
         }
       )
@@ -228,8 +217,6 @@ passport.use(
           });
         },
         function(err){
-          req.flash("error", err);
-          res.redirect("/");
           console.log(err);
         }
       )
@@ -257,62 +244,29 @@ app.get("/user/:username/create", ensureAuthenticated, function(req, res){
 // Change an individual's app ID
 app.post("/user/:username/change", ensureAuthenticated, function(req, res){
   var submittedID = req.sanitize(req.body.newID);
-  if(_validateID(submittedID)){
-    if(_uniqueID(submittedID)){
-      User.findOne({ username: req.user.username }, function(err, user){
-        if(err){
-          req.flash("error", err);
-          res.redirect("/");
-          console.log(err);
-        }
-        user.appID = submittedID;
-        user.save(function(err){
-          if(err){
-              req.flash("error", err);
-              res.redirect("/");
-              console.log(err);
-          }
-        req.flash("success", "Your ID has been updated! New ID: " + submittedID + ".");
-        res.redirect("/user/" + req.user.username);
-        });
-      });
-    } else {
-      // TO DO: THIS RENDERS TWICE FOR SOME REASON
-      req.flash("error", "ID must be unique.");
+  User.findOne({appID: submittedID}).exec(function(err, user){
+    if(err){
+      req.flash("error", err);
       res.redirect("/user/" + req.user.username);
-    }
-  } else {
-    req.flash("error", "ID must be alphanumeric and longer than 3 characters.");
-    res.redirect("/user/" + req.user.username);
-  }
-});
-
-// Find user based on submitted ID
-app.post("/finduser", function(req, res){
-  var submittedID = req.sanitize(req.body.id);
-  User.findOne({appID: submittedID}, function(err, user){
-    if(user){
-      // Check if the found user has songs in their library
-      if(user.library){
-        var songsInCommon = [];
-        req.user.library.forEach(function(track){
-
-          // Change the ID to one that can be read by Spotify API
-          var editedID = "spotify:track:" + track;
-          if(user.library.includes(track) && !songsInCommon.includes(editedID)){
-            songsInCommon.push(editedID);
-          }
-        });
-        _createPlaylist(songsInCommon, req.user, user.name);
-        req.flash("success", "The playlist has been created. Check your Spotify library!");
-        res.redirect("/user/" + req.user.username);
-      } else {
-        req.flash("error", "This user has no songs in their library. Maybe they are a Free subscriber?");
-        res.redirect("back");
-      }
     } else {
-      req.flash("error", "This user does not exist!");
-      res.redirect("back");
+      
+      // Check to see if the ID is valid and is unique
+      if(!user && _validateID(submittedID)){
+        User.findOne({username: req.user.username}).exec(function(err, user){
+          if(err){
+            req.flash("error", err);
+            res.redirect("/user/" + req.user.username);
+          } else {
+            user.appID = submittedID;
+            user.save();
+            req.flash("success", "Your new ID is: " + submittedID + ".");
+            res.redirect("/user/" + req.user.username);
+          }
+        })
+      } else {
+        req.flash("error", "ID must be unique and longer than 4 letters without special characters.");
+        res.redirect("/user/" + req.user.username);
+      }
     }
   });
 });
