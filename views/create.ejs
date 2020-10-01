@@ -1,7 +1,7 @@
 <%- include("./partials/header") %>
 
 <h4>Search for another user by ID to create a playlist</h4>
-<form action=<%= "/user/" + user.username + "/finduser" %> method="POST">
+<form action=<%= "/user/" + user.username + "/create" %> method="POST">
 	<input placeholder="User ID" name="id">
 	<button type="submit">Find</button>
 </form>
