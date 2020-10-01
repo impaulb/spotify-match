@@ -241,7 +241,7 @@ app.post("/user/:username/create", ensureAuthenticated, function(req, res){
   User.findOne({appID: req.body.id}).exec(function(err, user){
     if(err){
       req.flash("error", err);
-      res.redirect("/user/" + req.user.username + "/create");
+      res.redirect("/user/" + req.user.username);
     } else {
       if(user){
         var songsInCommon = [];
@@ -256,7 +256,7 @@ app.post("/user/:username/create", ensureAuthenticated, function(req, res){
           res.redirect("/user/" + req.user.username);
         } else {
           req.flash("error", "Something went wrong.. Try again and if it still doesn't work, please contact me!");
-          res.redirect("/user/" + req.user.username + "/create");
+          res.redirect("/user/" + req.user.username);
         }
       } else {
         req.flash("error", "This user does not exist.");
