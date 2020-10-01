@@ -1,14 +1,10 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Spotify Match</title>
-</head>
-<body>
-	<h2>Welcome to Spotify Match!</h2>
-	<% if (user) { %>
-		<p> <a href="<%= "/user/" + user.username %>"</a>Go to your user page</a> </p>
-	<%} else { %>
-		<p> <a href="/auth/spotify">Login via Spotify</a> </p>
-	<% } %>
-</body>
-</html>
+<%- include("./partials/header") %>
+
+<h2>Welcome to Spotify Match!</h2>
+<% if (user) { %>
+	<p> <a href="<%= "/user/" + user.username %>"</a>Go to your user page</a> </p>
+<%} else { %>
+	<p> <a href="/auth/spotify">Login via Spotify</a> </p>
+<% } %>
+
+<%- include("./partials/footer") %>

@@ -14,6 +14,7 @@ var express = require("express"),
     bodyParser = require("body-parser"),
     Promise = require('bluebird'),
     request = require('request-promise-native'),
+    flash = require('connect-flash'),
     SpotifyAPI = require('spotify-web-api-node'),
     User = require("./models/User.js");
 
@@ -34,6 +35,14 @@ app.use(override("_method"));
 app.use(session({ secret: "ninjawarrior", resave: true, saveUninitialized: true }));
 app.use(passport.initialize());
 app.use(passport.session());
+app.use(flash());
+
+// Flash set up
+app.use(function(req, res, next){
+  res.locals.error = req.flash("error");
+  res.locals.success = req.flash("success");
+  next();
+});
 
 // MongoDB
 mongoose.connect(connectionString, {useUnifiedTopology: true, useNewUrlParser: true});
@@ -55,44 +64,52 @@ passport.deserializeUser(function (obj, done) {
  * @param  {Array} songIDs Array of SongIDs (formatted) to add to playlist
  * @param {req.user} user1 User object who will be the owner
  * @param {String} user2_name Name of the second user for title of playlist
- * @return Nothing
+ * @return {Boolean} If the playlist was created successfully
  */
-function _createPlaylist(songIDs, user1, user2_name){
+async function _createPlaylist(songIDs, user1, user2_name){
 
   // Check if the list of song IDs is empty
   if(!songIDs[0]){
     console.log("You don't have any songs in common!");
+    return false;
   } else {
 
-    // Must have this to ensure the app doesn't crash
-    // Spotify API can't handle more than 50.
-    // Should be able to fix it by running a for loop.
+    // Check if there are more than 50 songs in common, if so, limit to 50 (to be removed)
     if(songIDs.length > 50){
-      songIDs = songIDs.slice(0, 49);
-      console.log("You had more than 50 songs in common, that is more than the free limit!");
+      songIDs = songIDs.slice(0, 50);
     }
 
-    spotifyApi.createPlaylist(user1.username, 'Spotify Match: ' + user2_name + ' & ' + user1.name, { 'public' : false })
-    .then(function(data) {
-
-      // Add playlist ID to user's storage to display later
-      User.findOne({username: user1.username}, function(err, user){
-        user.spotify_match_playlists.push(data.body.uri);
-        user.save(function(err){ if(err) { console.log(err) } });
+    // Use the Spotify API to create the playlist
+    return new Promise (resolve => {
+      spotifyApi.createPlaylist(user1.username, 'Spotify Match: ' + user2_name + ' & ' + user1.name, { 'public' : false })
+      .then(function(playlistData) {
+        spotifyApi.addTracksToPlaylist(playlistData.body.id, songIDs)
+        .then(function(data){
+          User.findOne({username: user1.username}).exec(function(err, user){
+            if(err){
+              console.log("Something went wrong!", err);
+            } else {
+              user.spotify_match_playlists.push(playlistData.body.id);
+              user.save(function(err){
+                if(err){
+                  console.log("Something went wrong!", err);
+                } else {
+                  resolve(true);
+                }
+              })
+            }
+          })
+        },
+        function(err){
+          console.log('Something went wrong (creating playlist)!', err);
+          resolve(false);
+        })
+      }, 
+      function(err) {
+        console.log('Something went wrong (creating playlist)!', err);
+        resolve(false);
       });
-
-      // Populate the new playlist with songs in common
-      spotifyApi.addTracksToPlaylist(data.body.id, songIDs)
-      .then(function(data) {
-
-        // TO DO: do something here lol
-        console.log('Successfully added songs!');
-      }, function(err) {
-        console.log('Something went wrong (adding tracks)!', err);
-      });
-    }, function(err) {
-      console.log('Something went wrong (creating playlist)!', err);
-    });
+    }) 
   }
 }
 
@@ -117,20 +134,13 @@ async function _getDataOfPage(accessToken, offset, limit){
   });
 }
 
-
-// TO DO: ADD UNIQuE USER VALIDATION
 /**
  * Validate a user's ID
  * @param  {String} id User ID to validate
  * @return {Boolean} Return if the id is valid or not
  */
 function _validateID(id){
-  if(/^[a-z0-9]+$/i.test(id) && id.length > 3){
-    return true;
-  } else {
-    console.log("ID must be alphanumeric and longer than 3 characters!");
-    return false;
-  }
+  return(/^[a-z0-9]+$/i.test(id) && id.length > 3);
 }
 
 // Use Passport.JS Spotify strategy to authenticate user into the app
@@ -195,7 +205,7 @@ passport.use(
               user.photos = profile.photos;
               user.library = userLibraryOfSongIDs;
               if(!user.appID){ user.appID = profile.id }
-              user.save(function(err){ if(err) { console.log(err) } });
+              user.save(function(err){ if(err) { req.flash("error", err); console.log(err) } });
               return done(err, user);
             });
           });
@@ -220,57 +230,69 @@ app.get("/user/:username", ensureAuthenticated, function(req, res){
   });
 });
 
-// Render individual user page based on their ID
+// Render the page to create new playlists
 app.get("/user/:username/create", ensureAuthenticated, function(req, res){
   res.render("create", {user: req.user});
+});
+
+// Create a new playlist with another user
+app.post("/user/:username/create", ensureAuthenticated, function(req, res){
+  User.findOne({appID: req.body.id}).exec(function(err, user){
+    if(err){
+      req.flash("error", err);
+      res.redirect("/user/" + req.user.username + "/create");
+    } else {
+      if(user){
+        var songsInCommon = [];
+        for(let i = 0; i < req.user.library.length; i++){
+          const curSong = req.user.library[i];
+          if(user.library.includes(curSong)){
+            songsInCommon.push("spotify:track:" + curSong);
+          }
+        }
+        if(_createPlaylist(songsInCommon, req.user, user.name)){
+          req.flash("success", "Spotify Match playlist has been created successfully!");
+          res.redirect("/user/" + req.user.username);
+        } else {
+          req.flash("error", "Something went wrong.. Try again and if it still doesn't work, please contact me!");
+          res.redirect("/user/" + req.user.username + "/create");
+        }
+      } else {
+        req.flash("error", "This user does not exist.");
+        res.redirect("/user/" + req.user.username);
+      }
+    }
+  });
 });
 
 // Change an individual's app ID
 app.post("/user/:username/change", ensureAuthenticated, function(req, res){
   var submittedID = req.sanitize(req.body.newID);
-  if(_validateID(submittedID)){
-    User.findOne({ username: req.user.username }, function(err, user){
-      if(err){
-        console.log(err);
-      }
-      user.appID = submittedID;
-      user.save(function(err){
-        if(err){
-            console.log(err);
-        }
+  User.findOne({appID: submittedID}).exec(function(err, user){
+    if(err){
+      req.flash("error", err);
       res.redirect("/user/" + req.user.username);
-      });
-    });
-  } else {
-    res.redirect("/user/" + req.user.username);
-  }
-});
-
-// Find user based on submitted ID
-app.post("/finduser", function(req, res){
-  var submittedID = req.sanitize(req.body.id);
-  User.findOne({appID: submittedID}, function(err, user){
-    if(user){
-      // Check if the found user has songs in their library
-      if(user.library){
-        var songsInCommon = [];
-        req.user.library.forEach(function(track){
-
-          // Change the ID to one that can be read by Spotify API
-          var editedID = "spotify:track:" + track;
-          if(user.library.includes(track) && !songsInCommon.includes(editedID)){
-            songsInCommon.push(editedID);
-          }
-        });
-        _createPlaylist(songsInCommon, req.user, user.name);
-      }
     } else {
-      console.log("This user does not exist!");
-    }
-  })
 
-  // TO DO: redirect to a page which has some user feedback.
-  res.redirect("/user/" + req.user.username + "/create");
+      // Check to see if the ID is valid and is unique
+      if(!user && _validateID(submittedID)){
+        User.findOne({username: req.user.username}).exec(function(err, user){
+          if(err){
+            req.flash("error", err);
+            res.redirect("/user/" + req.user.username);
+          } else {
+            user.appID = submittedID;
+            user.save();
+            req.flash("success", "Your new ID is: " + submittedID + ".");
+            res.redirect("/user/" + req.user.username);
+          }
+        })
+      } else {
+        req.flash("error", "ID must be unique and longer than 4 letters without special characters.");
+        res.redirect("/user/" + req.user.username);
+      }
+    }
+  });
 });
 
 // Authentication for spotify
@@ -280,16 +302,19 @@ app.get("/auth/spotify", passport.authenticate("spotify", {
 }));
 
 app.get(authCallbackPath, passport.authenticate("spotify", { failureRedirect: "/" }), function (req, res) {
+    req.flash("success", "You are logged in. Welcome, " + req.user.name + "!");
     res.redirect("/user/" + req.user.username);
   }
 );
 
 app.get("/logout", function (req, res) {
   req.logout();
+  req.flash("success", "You have been logged out.");
   res.redirect("/");
 });
 
 app.get("*", function(req, res){
+  req.flash("error", "The page you specified does not exist!");
   res.redirect("/");
 });
 
@@ -301,5 +326,6 @@ function ensureAuthenticated(req, res, next) {
   if(req.isAuthenticated() && req.user.username === req.params.username) {
     return next();
   }
+  req.flash("error", "You do not have permission to view that page.");
   res.redirect("/");
 }
