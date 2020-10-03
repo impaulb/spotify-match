@@ -63,6 +63,7 @@ passport.deserializeUser(function (obj, done) {
 
 /**
  * Create a playlist on Spotify for a user
+ * @param  {String} accessToken Spotify access token
  * @param  {Array} songIDs Array of SongIDs (formatted) to add to playlist
  * @param {req.user} user1 User object who will be the owner
  * @param {String} user2_name Name of the second user for title of playlist
@@ -76,9 +77,9 @@ async function _createPlaylist(songIDs, user1, user2_name){
     return false;
   } else {
 
-    // Check if there are more than 50 songs in common, if so, limit to 50 (to be removed)
-    if(songIDs.length > 50){
-      songIDs = songIDs.slice(0, 50);
+    // Check if there are more than 100 songs in common, if so, limit to 50 (to be removed)
+    if(songIDs.length > 100){
+      songIDs = songIDs.slice(0, 100);
     }
 
     // Use the Spotify API to create the playlist
@@ -91,7 +92,15 @@ async function _createPlaylist(songIDs, user1, user2_name){
             if(err){
               console.log("Something went wrong!", err);
             } else {
-              user.spotify_match_playlists.push(playlistData.body.id);
+             _getPlaylistCoverImage(playlistData.body.id)
+             .then(function(coverURL){
+              var newPlaylist = {
+                id: playlistData.body.id,
+                url: playlistData.body.external_urls.spotify,
+                name: playlistData.body.name,
+                cover: coverURL
+              }
+              user.spotify_match_playlists.push(newPlaylist);
               user.save(function(err){
                 if(err){
                   console.log("Something went wrong!", err);
@@ -99,6 +108,7 @@ async function _createPlaylist(songIDs, user1, user2_name){
                   resolve(true);
                 }
               })
+             })
             }
           })
         },
@@ -117,7 +127,7 @@ async function _createPlaylist(songIDs, user1, user2_name){
 
 /**
  * Returns a page of the user library
- * @param  {string} accessToken Spotify API's access token
+ * @param {string} accessToken Spotify API's access token
  * @param {number} offset Specify the number of songs to skip when reading
  * @param {number} limit Specify how many songs to return
  * @return {Promise} A promise which contains the specified portion of the user library
@@ -137,12 +147,32 @@ async function _getDataOfPage(accessToken, offset, limit){
 }
 
 /**
+ * Return the cover photo for the playlist
+ * @param {string} playlistID Playlist ID for the cover image
+ * @return {Promise} A promise which contains the specified image
+ */
+async function _getPlaylistCoverImage(playlistID){
+  return new Promise(async resolve => {
+    var accessToken = spotifyApi.getAccessToken();
+    const images = await request({
+      method: 'GET',
+      uri: `	https://api.spotify.com/v1/playlists/${playlistID}/images`,
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      },
+      json: true
+    });
+    resolve(images[0].url);
+  });
+}
+
+/**
  * Validate a user's ID
  * @param  {String} id User ID to validate
  * @return {Boolean} Return if the id is valid or not
  */
 function _validateID(id){
-  return(/^[a-z0-9]+$/i.test(id) && id.length > 3);
+  return(id && /^[a-z0-9]+$/i.test(id) && id.length > 3);
 }
 
 /**
@@ -252,10 +282,6 @@ passport.use(
             }));
           }
 
-          var playlistTracks = [];
-          // Request a list of all user playlists then retrieve
-          // all of the songs inside each playlist.
-
           var userLibraryOfSongIDs = [];
           // Construct user's entire song library from resolved Promises
           // and extract song IDs to store
@@ -277,9 +303,9 @@ passport.use(
                 user.name = profile.displayName;
                 user.photos = profile.photos;
 
-                // Uses Underscore.js to forn a super-library of sorts
+                // Uses Underscore.js to form a super-library of sorts
                 user.library = _.union(userLibraryOfSongIDs, userPlaylistsSongIDs);
-                if(!user.appID){ user.appID = profile.id }
+                user.appID = user._id;
                 user.save(function(err){ if(err) { req.flash("error", err); console.log(err) } });
                 return done(err, user);
               });
@@ -318,32 +344,38 @@ app.get("/user/:username/create", ensureAuthenticated, function(req, res){
 
 // Create a new playlist with another user
 app.post("/user/:username/create", ensureAuthenticated, function(req, res){
-  User.findOne({appID: req.body.id}).exec(function(err, user){
-    if(err){
-      req.flash("error", err);
-      res.redirect("/user/" + req.user.username);
-    } else {
-      if(user){
-        var songsInCommon = [];
-        for(let i = 0; i < req.user.library.length; i++){
-          const curSong = req.user.library[i];
-          if(user.library.includes(curSong)){
-            songsInCommon.push("spotify:track:" + curSong);
-          }
-        }
-        if(_createPlaylist(songsInCommon, req.user, user.name)){
-          req.flash("success", "Spotify Match playlist has been created successfully!");
-          res.redirect("/user/" + req.user.username);
-        } else {
-          req.flash("error", "Something went wrong.. Try again and if it still doesn't work, please contact me!");
-          res.redirect("/user/" + req.user.username);
-        }
-      } else {
-        req.flash("error", "This user does not exist.");
+  const userID = req.sanitize(req.body.id);
+  if(_validateID(userID)){
+    User.findOne({appID: req.body.id}).exec(function(err, user){
+      if(err){
+        req.flash("error", err);
         res.redirect("/user/" + req.user.username);
+      } else {
+        if(user){
+          var songsInCommon = [];
+          for(let i = 0; i < req.user.library.length; i++){
+            const curSong = req.user.library[i];
+            if(user.library.includes(curSong)){
+              songsInCommon.push("spotify:track:" + curSong);
+            }
+          }
+          if(_createPlaylist(songsInCommon, req.user, user.name)){
+            req.flash("success", "Spotify Match playlist has been created successfully!");
+            res.redirect("/user/" + req.user.username);
+          } else {
+            req.flash("error", "Something went wrong.. Try again and if it still doesn't work, please contact me!");
+            res.redirect("/user/" + req.user.username);
+          }
+        } else {
+          req.flash("error", "This user does not exist.");
+          res.redirect("/user/" + req.user.username);
+        }
       }
-    }
-  });
+    });
+  } else {
+    req.flash("error", "The ID you entered is invalid.");
+    res.redirect("/user/" + req.user.username);
+  }
 });
 
 // Change an individual's app ID

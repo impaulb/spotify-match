@@ -1,21 +1,47 @@
 <%- include("./partials/header") %>
 
 <div class="wrapper">
-	<h2>🤘 Spotify Match</h2>
-	<div class="user-wrap">
-		<img class="user-img" src=<%=user.photos[0]%>>
-		<h3 class="user-name"> Hi, <%=user.name%>!</h2>
-		<h4 id="id_text"> Your ID: <%=user.appID%></h4>
-		<form action=<%= "/user/" + user.username + "/change" %> method="POST">
-			<input name="newID" value="<%=user.appID%>">
-			<button type="submit">Change ID</button> 
+	<div class="wrapper-left">
+		<h1>🤘 Spotify Match</h1>
+		<h3><span id="greet-msg"></span>, <%= user.name %>!</h3>
+		<p class="slim secondary">Your ID: <span class="secondary b"><%= user.appID %></span></p>
+		<form class="primary-form top-lg" action=<%= "/user/" + user.username + "/create" %> method="POST">
+			<h3>Create a match:</h3>
+			<input class="primary-input top-sm" placeholder="Friend's ID" name="id">
+			<button class="primary-btn btn-form top-xs" type="submit">Create a Match</button>
 		</form>
-		<form action=<%= "/user/" + user.username + "/create" %> method="POST">
-			<input placeholder="User ID" name="id">
-			<button type="submit">Create a Match</button>
+		<form class="primary-form top-lg" action=<%= "/user/" + user.username + "/change" %> method="POST">
+			<h3>Change your ID:</h3>
+			<input class="primary-input top-sm" placeholder="New ID" name="newID">
+			<button class="primary-btn btn-form top-xs" type="submit">Change ID</button>
 		</form>
+		<p class="small-txt secondary top-lg"><a class="clickable" href="/logout">Log Out</a> | <a class="clickable" href="/logout">Report a bug</a></p>
+		<p class="small-txt secondary">Here's a quick <a class="clickable" href="/tutorial">tutorial</a></p>
+		<p class="small-txt secondary">Created by <a class="clickable" target="_blank" href="https://paulboldyrev.me/">Paul Boldyrev</a></p>
 	</div>
-	<p><a href="/logout">Log out</a></p>
+	<div class="wrapper-right text-center">
+		<h1 class="btm-lg">🎵 Past Matches</h1>
+		<div class="matches-wrapper">
+			<% user.spotify_match_playlists.forEach(playlist => { %>
+				<div class="playlist-wrapper">
+					<a href=<%= playlist.url %> target="_blank">
+						<img src="<%= playlist.cover %>" class="playlist-cover">
+					</a>
+					<p><%= playlist.name %></p>
+				</div>
+			<% }) %>
+		</div>
+	</div>
 </div>
+
+<script>
+  	var now = new Date();
+	var hrs = now.getHours();
+	var msg = "";
+	if (hrs >  0) msg = "Good morning";
+	if (hrs > 12) msg = "Good afternoon";
+
+	document.getElementById('greet-msg').textContent = msg;
+</script>
 
 <%- include("./partials/footer") %>
