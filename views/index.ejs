@@ -1,9 +1,9 @@
 <%- include("./partials/header") %>
 
-<div class="index-wrap">
+<div class="wrapper">
 	<div class="header-wrap">
-		<h2 class="welcome-h">🤘 Spotify Match</h2>
-		<p>A project to help people bond over music<br>they have in common.</p>
+		<h2>🤘 Spotify Match</h2>
+		<p>A project to help people bond over<br>the music they have in common.</p>
 		<p class="sub">Created by <a target="_blank" href="https://paulboldyrev.me/">Paul Boldyrev</a></p>
 		<% if (user) { %>
 			<a href="<%= "/user/" + user.username %>" class="login-btn">Go to dashboard</a>
