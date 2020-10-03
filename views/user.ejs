@@ -20,7 +20,17 @@
 		<p class="small-txt secondary">Created by <a class="clickable" target="_blank" href="https://paulboldyrev.me/">Paul Boldyrev</a></p>
 	</div>
 	<div class="wrapper-right text-center">
-		<h1>🎵 Past Matches</h1>
+		<h1 class="btm-lg">🎵 Past Matches</h1>
+		<div class="matches-wrapper">
+			<% user.spotify_match_playlists.forEach(playlist => { %>
+				<div class="playlist-wrapper">
+					<a href=<%= playlist.url %> target="_blank">
+						<img src="<%= playlist.cover %>" class="playlist-cover">
+					</a>
+					<p><%= playlist.name %></p>
+				</div>
+			<% }) %>
+		</div>
 	</div>
 </div>
 
@@ -33,14 +43,5 @@
 
 	document.getElementById('greet-msg').textContent = msg;
 </script>
-
-<!-- <form action=<%= "/user/" + user.username + "/change" %> method="POST">
-	<input name="newID" value="<%=user.appID%>">
-	<button type="submit">Change ID</button> 
-</form>
-<form action=<%= "/user/" + user.username + "/create" %> method="POST">
-	<input placeholder="User ID" name="id">
-	<button type="submit">Create a Match</button>
-</form> -->
 
 <%- include("./partials/footer") %>

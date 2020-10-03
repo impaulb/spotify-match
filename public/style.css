@@ -74,6 +74,24 @@ a{
     line-height: 10px;
 }
 
+.playlist-cover{
+    width: 100%;
+}
+
+.matches-wrapper{
+    width: 100%;
+    justify-content: space-evenly;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+}
+
+.playlist-wrapper{
+    width: 30%;
+    margin: 0px 10px 0px 10px;
+    min-width: 150px;
+}
+
 .slim{
     margin-top: 0px;
 }

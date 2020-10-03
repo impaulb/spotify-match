@@ -281,10 +281,6 @@ passport.use(
             }));
           }
 
-          var playlistTracks = [];
-          // Request a list of all user playlists then retrieve
-          // all of the songs inside each playlist.
-
           var userLibraryOfSongIDs = [];
           // Construct user's entire song library from resolved Promises
           // and extract song IDs to store
@@ -306,9 +302,9 @@ passport.use(
                 user.name = profile.displayName;
                 user.photos = profile.photos;
 
-                // Uses Underscore.js to forn a super-library of sorts
+                // Uses Underscore.js to form a super-library of sorts
                 user.library = _.union(userLibraryOfSongIDs, userPlaylistsSongIDs);
-                if(!user.appID){ user.appID = profile.id }
+                user.appID = user._id;
                 user.save(function(err){ if(err) { req.flash("error", err); console.log(err) } });
                 return done(err, user);
               });

@@ -18,7 +18,11 @@
         <p>
             <b>4. Create a match.</b> Use your friend's ID and click "Create Match". Check your Spotify library for the new playlist!
         </p>
-        <a href="/" class="primary-btn btn-a">Go back</a>
+        <% if (user) { %>
+            <a href=<%= "/user/"+user.username+"/" %>  class="primary-btn btn-a">Go back</a>
+        <% } else { %>
+            <a href="/" class="primary-btn btn-a">Go back</a>
+        <% } %> 
     </div>
 </div>
 
