@@ -143,7 +143,7 @@ async function _getDataOfPage(accessToken, offset, limit){
  * @return {Boolean} Return if the id is valid or not
  */
 function _validateID(id){
-  return(/^[a-z0-9]+$/i.test(id) && id.length > 3);
+  return(id && /^[a-z0-9]+$/i.test(id) && id.length > 3);
 }
 
 /**
@@ -317,32 +317,38 @@ app.get("/user/:username/create", ensureAuthenticated, function(req, res){
 
 // Create a new playlist with another user
 app.post("/user/:username/create", ensureAuthenticated, function(req, res){
-  User.findOne({appID: req.body.id}).exec(function(err, user){
-    if(err){
-      req.flash("error", err);
-      res.redirect("/user/" + req.user.username);
-    } else {
-      if(user){
-        var songsInCommon = [];
-        for(let i = 0; i < req.user.library.length; i++){
-          const curSong = req.user.library[i];
-          if(user.library.includes(curSong)){
-            songsInCommon.push("spotify:track:" + curSong);
-          }
-        }
-        if(_createPlaylist(songsInCommon, req.user, user.name)){
-          req.flash("success", "Spotify Match playlist has been created successfully!");
-          res.redirect("/user/" + req.user.username);
-        } else {
-          req.flash("error", "Something went wrong.. Try again and if it still doesn't work, please contact me!");
-          res.redirect("/user/" + req.user.username);
-        }
-      } else {
-        req.flash("error", "This user does not exist.");
+  const userID = req.sanitize(req.body.id);
+  if(_validateID(userID)){
+    User.findOne({appID: req.body.id}).exec(function(err, user){
+      if(err){
+        req.flash("error", err);
         res.redirect("/user/" + req.user.username);
+      } else {
+        if(user){
+          var songsInCommon = [];
+          for(let i = 0; i < req.user.library.length; i++){
+            const curSong = req.user.library[i];
+            if(user.library.includes(curSong)){
+              songsInCommon.push("spotify:track:" + curSong);
+            }
+          }
+          if(_createPlaylist(songsInCommon, req.user, user.name)){
+            req.flash("success", "Spotify Match playlist has been created successfully!");
+            res.redirect("/user/" + req.user.username);
+          } else {
+            req.flash("error", "Something went wrong.. Try again and if it still doesn't work, please contact me!");
+            res.redirect("/user/" + req.user.username);
+          }
+        } else {
+          req.flash("error", "This user does not exist.");
+          res.redirect("/user/" + req.user.username);
+        }
       }
-    }
-  });
+    });
+  } else {
+    req.flash("error", "The ID you entered is invalid.");
+    res.redirect("/user/" + req.user.username);
+  }
 });
 
 // Change an individual's app ID

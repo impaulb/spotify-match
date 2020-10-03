@@ -1,19 +1,19 @@
 <%- include("./partials/header") %>
 
 <div class="wrapper">
-	<div class="header-wrap">
-		<h2>🤘 Spotify Match</h2>
+	<div class="wrapper-left">
+		<h1>🤘 Spotify Match</h1>
 		<p>A project to help people bond over<br>the music they have in common.</p>
-		<p class="sub secondary">Here's a quick <a href="/tutorial">tutorial</a></p>
-		<p class="sub-second secondary">Created by <a target="_blank" href="https://paulboldyrev.me/">Paul Boldyrev</a></p>
 		<% if (user) { %>
-			<a href="<%= "/user/" + user.username %>" class="login-btn">Go to dashboard</a>
+			<a href="<%= "/user/" + user.username %>" class="primary-btn btn-a">Go to dashboard</a>
 		<%} else { %>
-			<a href="/auth/spotify" class="login-btn">Login via Spotify</a>
+			<a href="/auth/spotify" class="primary-btn btn-a">Login via Spotify</a>
 		<% } %>
+		<p class="small-txt secondary">Here's a quick <a class="clickable" href="/tutorial">tutorial</a></p>
+		<p class="small-txt secondary">Created by <a class="clickable" target="_blank" href="https://paulboldyrev.me/">Paul Boldyrev</a></p>
 	</div>
-	<div class="preview-wrap">
-		<img src="intro.png">
+	<div class="wrapper-right">
+		<img src="intro.png" class="intro-img">
 	</div>
 </div>
 
