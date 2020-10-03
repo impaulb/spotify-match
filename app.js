@@ -207,8 +207,6 @@ async function _getPlaylistData(playlistId){
   });
 }
 
-
-
 // Use Passport.JS Spotify strategy to authenticate user into the app
 passport.use(
   new SpotifyStrategy(
@@ -299,6 +297,11 @@ passport.use(
 // Render the main page
 app.get("/", function (req, res) {
   res.render("index", { user: req.user });
+});
+
+// Render the tutorial page
+app.get("/tutorial", function (req, res) {
+  res.render("tutorial", { user: req.user });
 });
 
 // Render individual user page based on their ID
