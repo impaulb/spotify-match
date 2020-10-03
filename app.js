@@ -192,7 +192,9 @@ async function _getPlaylistData(playlistId){
       if(data.body.items.length > 0){
         var tracks = [];
         data.body.items.forEach(function(track){
-          tracks.push(track.track.id);
+          if(track.track){
+            tracks.push(track.track.id);
+          }
         });
         resolve(tracks);
       } else {
