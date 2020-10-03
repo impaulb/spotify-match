@@ -2,6 +2,7 @@
 
 const { resolve, all } = require("bluebird");
 const { lib } = require("nunjucks");
+const { type } = require("os");
 const { pathMatch } = require("tough-cookie");
 
 var express = require("express"),
@@ -15,6 +16,7 @@ var express = require("express"),
     Promise = require('bluebird'),
     request = require('request-promise-native'),
     flash = require('connect-flash'),
+    _ = require('underscore'),
     SpotifyAPI = require('spotify-web-api-node'),
     User = require("./models/User.js");
 
@@ -143,6 +145,68 @@ function _validateID(id){
   return(/^[a-z0-9]+$/i.test(id) && id.length > 3);
 }
 
+/**
+ * Get all of user's tracks in playlists
+ * @param  {String} id User ID to validate
+ * @param  {String} accessToken Spotify access token
+ * @return {Array} Return an array of all songs in user's playlists
+ */
+async function _getPlaylistTracks(id, accessToken){
+
+  return new Promise(resolve => {
+    spotifyApi.getUserPlaylists(id, accessToken)
+    .then(function(data) {
+      var playlistPromises = [];
+
+      // Push promises for each playlist
+      data.body.items.forEach(function(playlist){
+        playlistPromises.push(_getPlaylistData(playlist.id));
+      });
+
+      // Once all promises are resolved
+      Promise.all(playlistPromises)
+      .then(results => {
+        var allSongs = [];
+        results.forEach(function(result){
+          allSongs = allSongs.concat(result);
+        });
+        resolve(allSongs);
+      });
+    },function(err) {
+      console.log('Something went wrong!', err);
+    });
+  });
+}
+
+/**
+ * Get all of songs in a playlist
+ * @param  {String} playlistId ID of a playlist (NOT URI)
+ * @return {Array} Return an array of all songs in playlist
+ */
+async function _getPlaylistData(playlistId){
+  return new Promise(resolve => {
+    spotifyApi.getPlaylistTracks(playlistId)
+    .then(function(data){
+      
+      // Check if the playlist isn't empty
+      if(data.body.items.length > 0){
+        var tracks = [];
+        data.body.items.forEach(function(track){
+          tracks.push(track.track.id);
+        });
+        resolve(tracks);
+      } else {
+        resolve([]);
+      }
+    },
+    function(err){
+      console.log(err);
+    })
+  });
+}
+
+
+
 // Use Passport.JS Spotify strategy to authenticate user into the app
 passport.use(
   new SpotifyStrategy(
@@ -176,37 +240,49 @@ passport.use(
       .then(
         function(data){
           // Array of promises resolving to the user's entire song library
-          var promises = [];
+          var libraryPromises = [];
 
           // Loop to get the entire user's library
           // NOTE: Spotify's API limits the number of songs returned to 50
           // so this has to be done to circumvent that
           for(let i = 0; i < libraryLength/50; i++){
-            promises.push(new Promise((resolve) => {
+            libraryPromises.push(new Promise((resolve) => {
               let songs = _getDataOfPage(accessToken, i * 50, 50);
               resolve(songs);
             }));
           }
 
+          var playlistTracks = [];
+          // Request a list of all user playlists then retrieve
+          // all of the songs inside each playlist.
+
+          var userLibraryOfSongIDs = [];
           // Construct user's entire song library from resolved Promises
           // and extract song IDs to store
-          Promise.map(promises, Promise.props)
+          Promise.map(libraryPromises, Promise.props)
           .then(results => {
-            var userLibraryOfSongIDs = [];
             results.forEach(function(result){
               result.items.forEach(function(trackWrapper){
                 userLibraryOfSongIDs.push(trackWrapper.track.id);
               });
             })
-
+          })
+          .then(function(){
             // Find or create a user using all of the specified data
             User.findOrCreate({ username: profile.id }, function(err, user) {
-              user.name = profile.displayName;
-              user.photos = profile.photos;
-              user.library = userLibraryOfSongIDs;
-              if(!user.appID){ user.appID = profile.id }
-              user.save(function(err){ if(err) { req.flash("error", err); console.log(err) } });
-              return done(err, user);
+
+              // Crude way to add 
+              _getPlaylistTracks(profile.id, accessToken)
+              .then(function(userPlaylistsSongIDs){
+                user.name = profile.displayName;
+                user.photos = profile.photos;
+
+                // Uses Underscore.js to forn a super-library of sorts
+                user.library = _.union(userLibraryOfSongIDs, userPlaylistsSongIDs);
+                if(!user.appID){ user.appID = profile.id }
+                user.save(function(err){ if(err) { req.flash("error", err); console.log(err) } });
+                return done(err, user);
+              });
             });
           });
         },
@@ -283,7 +359,6 @@ app.post("/user/:username/change", ensureAuthenticated, function(req, res){
           } else {
             user.appID = submittedID;
             user.save();
-            req.flash("success", "Your new ID is: " + submittedID + ".");
             res.redirect("/user/" + req.user.username);
           }
         })
@@ -302,20 +377,22 @@ app.get("/auth/spotify", passport.authenticate("spotify", {
 }));
 
 app.get(authCallbackPath, passport.authenticate("spotify", { failureRedirect: "/" }), function (req, res) {
-    req.flash("success", "You are logged in. Welcome, " + req.user.name + "!");
     res.redirect("/user/" + req.user.username);
   }
 );
 
 app.get("/logout", function (req, res) {
   req.logout();
-  req.flash("success", "You have been logged out.");
   res.redirect("/");
 });
 
 app.get("*", function(req, res){
-  req.flash("error", "The page you specified does not exist!");
-  res.redirect("/");
+  req.flash("error", "That page does not exist!");
+  if(req.user){
+    res.redirect("/user/" + req.user.username);
+  } else {
+    res.redirect("/");
+  }
 });
 
 app.listen(port, function () {
@@ -326,6 +403,6 @@ function ensureAuthenticated(req, res, next) {
   if(req.isAuthenticated() && req.user.username === req.params.username) {
     return next();
   }
-  req.flash("error", "You do not have permission to view that page.");
+  req.flash("error", "You can't access that page. Try logging in!");
   res.redirect("/");
 }

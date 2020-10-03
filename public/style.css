@@ -11,12 +11,8 @@ h2{
     font-size: 30px;
 }
 
-.welcome-h{
+h2{
     margin-bottom: 25px;
-}
-
-.main-h{
-    font-size: 40px;
 }
 
 p{
@@ -57,7 +53,7 @@ a:hover{
     transition: 0.3s;
 }
 
-.index-wrap{
+.wrapper{
     display: flex;
     flex-flow: row wrap;
     justify-content: flex-start;
@@ -66,7 +62,7 @@ a:hover{
 
 .header-wrap{
     position: relative;
-    width: calc(20vw);
+    width: 20vw;
     min-width: 300px;
     height: 100%;
     margin-bottom: 75px;
@@ -100,29 +96,8 @@ a:hover{
     background-color: #EF7663;
 }
 
-.dash-wrap{
-    margin: 7vw 10vw;
-    min-width: 80vw;
-}
-
-.user-wrap{
-    display: flex;
-    flex-flow: row wrap;
-}
-
-.user-img{
-    display: relative;
-    width: 100px;
-    border: 2px solid #1DB954;
-    border-radius: 3px;
-}
-
-.user-name{
-    display: relative;
-}
-
 @media only screen and (max-width: 1200px) {
-    .index-wrap {
+    .wrapper {
         margin: 0 auto;
         position: relative;
     }
