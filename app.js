@@ -78,7 +78,7 @@ async function _createPlaylist(songIDs, user1, user2_name){
 
     // Use the Spotify API to create the playlist
     return new Promise (resolve => {
-      spotifyApi.createPlaylist(user1.username, 'Spotify Match: ' + user2_name + ' & ' + user1.name, { 'public' : false })
+      spotifyApi.createPlaylist(user1.username, user2_name + ' & ' + user1.name, { 'public' : false })
       .then(function(playlistData) {
         spotifyApi.addTracksToPlaylist(playlistData.body.id, songIDs)
         .then(function(data){
@@ -339,7 +339,7 @@ app.get("/user/:username/create", ensureAuthenticated, function(req, res){
 
 // Create a new playlist with another user
 app.post("/user/:username/create", ensureAuthenticated, function(req, res){
-  const userID = req.sanitize(req.body.id);
+  const userID = req.sanitize(req.body.id).toLowerCase();
   if(_validateID(userID)){
     User.findOne({appID: req.body.id}).exec(function(err, user){
       if(err){
@@ -380,7 +380,7 @@ app.post("/user/:username/create", ensureAuthenticated, function(req, res){
 
 // Change an individual's app ID
 app.post("/user/:username/change", ensureAuthenticated, function(req, res){
-  var submittedID = req.sanitize(req.body.newID);
+  var submittedID = req.sanitize(req.body.newID).toLowerCase();
   User.findOne({appID: submittedID}).exec(function(err, user){
     if(err){
       req.flash("error", err);
