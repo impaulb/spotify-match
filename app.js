@@ -396,7 +396,7 @@ app.post("/user/:username/change", ensureAuthenticated, function(req, res){
           } else {
             user.appID = submittedID;
             user.save();
-            res.redirect("/user/" + req.user.username);
+            res.redirect('back');
           }
         })
       } else {
