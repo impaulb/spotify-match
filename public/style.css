@@ -186,6 +186,10 @@ a{
     margin: 10px; 
 }
 
+.red{
+    color: red;
+}
+
 .wrapper-left{
     width: 300px;
     margin-right: 25px;
