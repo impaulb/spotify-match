@@ -178,7 +178,7 @@ a{
     justify-content: space-evenly;
     display: flex;
     flex-wrap: wrap;
-    flex-direction: row;
+    flex-direction: row-reverse;
 }
 
 .playlist-wrapper{
