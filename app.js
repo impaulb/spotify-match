@@ -339,7 +339,7 @@ app.get("/user/:username/create", ensureAuthenticated, function(req, res){
 
 // Create a new playlist with another user
 app.post("/user/:username/create", ensureAuthenticated, function(req, res){
-  const userID = req.sanitize(req.body.id).toLowerCase();
+  const userID = req.sanitize(req.body.id);
   if(_validateID(userID)){
     User.findOne({appID: req.body.id}).exec(function(err, user){
       if(err){
@@ -380,7 +380,7 @@ app.post("/user/:username/create", ensureAuthenticated, function(req, res){
 
 // Change an individual's app ID
 app.post("/user/:username/change", ensureAuthenticated, function(req, res){
-  var submittedID = req.sanitize(req.body.newID).toLowerCase();
+  var submittedID = req.sanitize(req.body.newID);
   User.findOne({appID: submittedID}).exec(function(err, user){
     if(err){
       req.flash("error", err);
