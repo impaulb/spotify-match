@@ -236,7 +236,7 @@ passport.use(
     {
       clientID: process.env.clientID,
       clientSecret: process.env.clientSecret,
-      callbackURL: "http://www.spotifymatch.com" + authCallbackPath,
+      callbackURL: "http://spotify-match-app.herokuapp.com" + authCallbackPath,
     },
 
     // Authenticate a user and pull their music library into database
