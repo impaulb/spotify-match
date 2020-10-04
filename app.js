@@ -71,12 +71,6 @@ passport.deserializeUser(function (obj, done) {
  */
 async function _createPlaylist(songIDs, user1, user2_name){
 
-  // Check if the list of song IDs is empty
-  if(!songIDs[0]){
-    console.log("You don't have any songs in common!");
-    return false;
-  } else {
-
     // Check if there are more than 100 songs in common, if so, limit to 50 (to be removed)
     if(songIDs.length > 100){
       songIDs = songIDs.slice(0, 100);
@@ -92,8 +86,8 @@ async function _createPlaylist(songIDs, user1, user2_name){
             if(err){
               console.log("Something went wrong!", err);
             } else {
-             _getPlaylistCoverImage(playlistData.body.id)
-             .then(function(coverURL){
+              _getPlaylistCoverImage(playlistData.body.id)
+              .then(function(coverURL){
               var newPlaylist = {
                 id: playlistData.body.id,
                 url: playlistData.body.external_urls.spotify,
@@ -108,7 +102,7 @@ async function _createPlaylist(songIDs, user1, user2_name){
                   resolve(true);
                 }
               })
-             })
+              })
             }
           })
         },
@@ -122,7 +116,6 @@ async function _createPlaylist(songIDs, user1, user2_name){
         resolve(false);
       });
     }) 
-  }
 }
 
 /**
@@ -305,7 +298,9 @@ passport.use(
 
                 // Uses Underscore.js to form a super-library of sorts
                 user.library = _.union(userLibraryOfSongIDs, userPlaylistsSongIDs);
-                user.appID = user._id;
+                if(!user){
+                  user.appID = user._id;
+                }
                 user.save(function(err){ if(err) { req.flash("error", err); console.log(err) } });
                 return done(err, user);
               });
@@ -359,12 +354,17 @@ app.post("/user/:username/create", ensureAuthenticated, function(req, res){
               songsInCommon.push("spotify:track:" + curSong);
             }
           }
-          if(_createPlaylist(songsInCommon, req.user, user.name)){
-            req.flash("success", "Spotify Match playlist has been created successfully!");
+          if(songsInCommon.length === 0){
+            req.flash("error", "You don't have any songs in common!");
             res.redirect("/user/" + req.user.username);
           } else {
-            req.flash("error", "Something went wrong.. Try again and if it still doesn't work, please contact me!");
-            res.redirect("/user/" + req.user.username);
+            if(_createPlaylist(songsInCommon, req.user, user.name)){
+              req.flash("success", "Spotify Match playlist has been created successfully!");
+              res.redirect("/user/" + req.user.username);
+            } else {
+              req.flash("error", "Something went wrong.. Try again and if it still doesn't work, please contact me!");
+              res.redirect("/user/" + req.user.username);
+            }
           }
         } else {
           req.flash("error", "This user does not exist.");
@@ -396,7 +396,7 @@ app.post("/user/:username/change", ensureAuthenticated, function(req, res){
           } else {
             user.appID = submittedID;
             user.save();
-            res.redirect('back');
+            res.redirect("/user/" + req.user.username);
           }
         })
       } else {
